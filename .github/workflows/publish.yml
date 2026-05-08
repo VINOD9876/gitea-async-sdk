@@ -1,0 +1,90 @@
+# .github/workflows/publish.yml
+#
+# Publishes gitea-async-sdk to PyPI using Trusted Publishing (OIDC).
+# No static secrets or PYPI_TOKEN required.
+#
+# Triggers:
+#   - On a published GitHub Release
+#   - On any tag matching v* (e.g., v1.25.4)
+#
+# One-time PyPI setup required before first publish:
+#   https://pypi.org/manage/account/publishing/
+#   Owner: <your-org>  Repo: gitea-async-sdk  Workflow: publish.yml  Env: pypi
+
+name: Build & Publish to PyPI
+
+on:
+  release:
+    types: [published]
+  push:
+    tags:
+      - "v*"
+
+# Restrict top-level permissions — jobs narrow further
+permissions:
+  contents: read
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # JOB 1: Build wheel + sdist
+  # ─────────────────────────────────────────────────────────────────────────────
+  build:
+    name: Build distribution packages
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install build tooling
+        run: |
+          python -m pip install --upgrade pip
+          pip install hatchling build
+
+      - name: Build wheel and source distribution
+        run: python -m build
+
+      - name: Verify dist contents
+        run: ls -lh dist/
+
+      - name: Upload dist as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-packages
+          path: dist/
+          retention-days: 1
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # JOB 2: Publish to PyPI via Trusted Publishing (OIDC) — no tokens
+  # ─────────────────────────────────────────────────────────────────────────────
+  publish:
+    name: Publish to PyPI (Trusted Publishing / OIDC)
+    needs: build
+    runs-on: ubuntu-latest
+
+    # MANDATORY for OIDC token exchange — scoped to this job only (least privilege)
+    permissions:
+      id-token: write
+      contents: read
+
+    # Link to a GitHub Environment for optional manual-approval gates
+    environment:
+      name: pypi
+      url: https://pypi.org/project/gitea-async-sdk/
+
+    steps:
+      - name: Download built packages
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-packages
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        # No username/password/token — OIDC handles authentication automatically

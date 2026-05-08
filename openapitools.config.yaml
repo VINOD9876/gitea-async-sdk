@@ -1,0 +1,16 @@
+# OpenAPI Generator Configuration for Gitea Async SDK
+# Usage: referenced via -c flag in the docker run command
+packageName: gitea_async
+projectName: gitea-async-sdk
+packageVersion: "1.25.4"
+library: asyncio
+buildSystem: hatchling
+
+# Developer / maintainer metadata
+developerName: "Gitea Python Maintainers"
+developerEmail: "maintainers@example.com"
+developerOrganization: "Gitea Python Maintainers"
+developerOrganizationUrl: "https://github.com/VINOD9876/gitea-async-sdk"
+
+# Generation options
+generateSourceCodeOnly: false
